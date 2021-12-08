@@ -24,10 +24,10 @@ class ConfigFactory
         $instance->setAppName($config->get('xxl_job.app_name') ?? '');
         $instance->setAccessToken($config->get('xxl_job.access_token') ?? '');
         $adminAddressArr = parse_url($config->get('xxl_job.admin_address') ?? 'http://127.0.0.1:8080/xxl-job-admin');
-        $instance->setBaseUri(sprintf('%s://%s:%s', $adminAddressArr['scheme'], $adminAddressArr['host'], $adminAddressArr['port']));
+        $instance->setBaseUri(sprintf('%s://%s:%s', $adminAddressArr['scheme'], $adminAddressArr['host'], $adminAddressArr['port'] ?? 80));
         $instance->setServerUrlPath($adminAddressArr['path'] ?? '');
-        $instance->setHeartbeat($config->get('xxl_job.heartbeat') ?? 30);
-        $instance->setExecutorServerPrefixUrl($config->get('xxl_job.executor_server.prefix_url'));
+        $instance->setHeartbeat((int)$config->get('xxl_job.heartbeat') ?? 30);
+        $instance->setExecutorServerPrefixUrl($config->get('xxl_job.executor_server.prefix_url') ?? 'php-xxl-job');
         if ($config->has('xxl_job.guzzle.config') && ! empty($config->get('xxl_job.guzzle.config'))) {
             $instance->setGuzzleConfig($config->get('xxl_job.guzzle.config'));
         }

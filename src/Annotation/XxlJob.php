@@ -27,10 +27,10 @@ class XxlJob extends AbstractAnnotation
 
     public string $destroy = '';
 
-    public function __construct(string $value = '', string $init = '', string $destroy = '')
+    public function __construct(array $params = [])
     {
-        $this->value = $value;
-        $this->init = $init;
-        $this->destroy = $destroy;
+        $this->value = $params['jobHandler'] ?? '';
+        $this->init = $params['init'] ?? '';
+        $this->destroy = $params['destroy'] ?? '';
     }
 }

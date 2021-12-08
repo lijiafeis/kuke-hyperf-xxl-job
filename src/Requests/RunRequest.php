@@ -17,7 +17,7 @@ class RunRequest extends BaseRequest
 
     protected string $executorHandler; // 任务标识
 
-    protected string $executorParams; // 任务参数
+    protected string $executorParams = ''; // 任务参数
 
     protected string $executorBlockStrategy; // 任务阻塞策略，可选值参考 com.xxl.job.core.enums.ExecutorBlockStrategyEnum
 
