@@ -11,6 +11,19 @@ declare(strict_types=1);
  */
 namespace Hyperf\XxlJob\Handler;
 
+use Hyperf\XxlJob\Requests\RunRequest;
+
 abstract class AbstractJobHandler implements JobHandlerInterface
 {
+    public string $jobHandler = '';
+
+    public function init(RunRequest $request): void
+    {
+
+    }
+
+    public function destroy(RunRequest $request): void
+    {
+
+    }
 }

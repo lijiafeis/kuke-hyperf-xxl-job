@@ -15,5 +15,7 @@ use Hyperf\XxlJob\Requests\RunRequest;
 
 interface JobHandlerInterface
 {
+    public function init(RunRequest $request): void;
     public function execute(RunRequest $request): void;
+    public function destroy(RunRequest $request): void;
 }

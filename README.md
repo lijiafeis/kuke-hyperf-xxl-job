@@ -1,6 +1,12 @@
-# xxl-job-incubator
+[toc]
+
+
+
+## hyperf_xxl_job
 
 此为 xxl-job 的 PHP 版本的任务执行器(Job Executor)，特别适配于 Hyperf 框架，其余框架尚未验证适配性
+
+此版本根据 [hyperf/xxl-job-incubator](https://github.com/hyperf/xxl-job-incubator) 改造而来
 
 ### 优点
 
@@ -11,54 +17,8 @@
 
 ## 使用须知
 
-> 1. xxl-job 服务端版本需 >= 2.2.0   
+> 1. xxl-job 服务端版本需 >= 2.2.0
 > 2. 无法取消正在执行的任务
-
-## 安装
-
-```
-composer require kukewang/hyperf_xxl_job
-```
-
-## 使用
-
-### 配置
-#### 发布配置文件
-```bash
-php bin/hyperf.php vendor:publish kukewang/hyperf_xxl_job
-```
-
-配置文件: `config/autoload/xxl_job.php`
-
-```php
-
-return [
-    // 是否启用 xxl_job
-    'enable' => env('XXL_JOB_ENABLE', true),
-    // XXL-JOB 服务端地址
-    'admin_address' => env('XXL_JOB_ADMIN_ADDRESS', 'http://127.0.0.1:8080/xxl-job-admin'),
-    // 对应的 AppName,xxl-job 创建的执行器 appName
-    'app_name' => env('XXL_JOB_APP_NAME', 'xxl-job-demo'),
-    // 访问凭证,执行器的访问凭证,如果配置，必填
-    'access_token' => env('XXL_JOB_ACCESS_TOKEN', ''),
-    // 执行器心跳间隔（秒）
-    'heartbeat' => env('XXL_JOB_HEARTBEAT', 30),
-    // 执行器 HTTP Server 相关配置
-    'executor_server' => [
-        // HTTP Server 路由前缀
-        'prefix_url' => env('XXL_JOB_EXECUTOR_PREFIX_URL', 'php-xxl-job')
-    ],
-    'guzzle_config' => [
-        'headers' => [
-            'charset' => 'UTF-8',
-        ],
-        'timeout' => 10,
-    ],
-    'file_logger' => [
-        'dir' => BASE_PATH . '/runtime/xxl_job/logs/',
-    ],
-];
-```
 
 ### Bean 模式(类形式)
 
@@ -66,193 +26,6 @@ Bean 模式任务，支持基于类的开发方式，每个任务对应一个 PH
 
 优点：与 Hyperf 整合性好，易于管理   
 缺点：任务运行于单独的，协程任务代码不能存在阻塞 IO，每个 Job 需占用一个类文件，Job 逻辑简单但数量过多时过于累赘
-
-#### 编写 Job 类
-
-编写一个实现 `Hyperf\XxlJob\Handler\JobHandlerInterface` 的 Job 类，并为 Job 类添加注解 `#[XxlJob('value')]`，注解的 value 值对应的是调度中心新建任务的 JobHandler 属性的值，如下所示：
-
-> Tips: 可直接继承 `Hyperf\XxlJob\Handler\AbstractJobHandler` 得到对应的实现
-
-```php
-namespace App\Job;
-
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\XxlJob\Annotation\XxlJob;
-use Hyperf\XxlJob\Handler\AbstractJobHandler;
-use Hyperf\XxlJob\Logger\JobExecutorLoggerInterface;
-use Hyperf\XxlJob\Requests\RunRequest;
-
-#[XxlJob("demoJobClassHandler")]
-class DemoJobClass extends AbstractJobHandler
-{
-
-    #[Inject]
-    protected JobExecutorLoggerInterface $jobExecutorLogger;
-
-    /**
-     * 执行任务
-     */
-    public function execute(RunRequest $request): void
-    {
-        // 获取参数
-        $params = $request->getExecutorParams();
-        // 获取 LogId
-        $logId = $request->getLogId();
-        $this->jobExecutorLogger->info('demoJobClassHandler...');
-        $this->jobExecutorLogger->info('params:' . $params);
-        for ($i = 1; $i < 5; ++$i) {
-            sleep(2);
-            $this->jobExecutorLogger->info($i);
-            $this->jobExecutorLogger->info('logId:' . $logId);
-            $this->jobExecutorLogger->info('params:' . $params);
-        }
-    }
-}
-```
-
-#### 在调度中心新建调度任务
-
-对新建的任务进行参数配置，运行模式选中 `BEAN模式`，JobHandler 属性填写注解 `#[XxlJob]`中定义 value 值
-![hMvJnQ](https://www.xuxueli.com/doc/static/xxl-job/images/img_ZAsz.png)
-
-### Bean 模式(方法形式)
-
-基于方法的开发方式，每个任务对应一个方法
-
-优点：相对比 `Bean(类形式)` 更加灵活   
-缺点：数量多时更难管理，代码复杂度高时多个任务间容易造成耦合度过高
-
-#### 编写 Job 方法
-
-对任意类中的 Public 方法增加 `#[XxlJob('value')]` 注解，注解的 value 值对应的是调度中心新建任务的 JobHandler 属性的值
-
-```php
-use Hyperf\XxlJob\Annotation\XxlJob;
-
-class Foo {
-
-    #[XxlJob('demoJobHandler')]
-    public function demoJobHandler(){}
-
-}
-```
-
-#### 在调度中心新建调度任务
-
-对新建的任务进行参数配置，运行模式选中 `BEAN模式`，JobHandler 属性填写注解 `#[XxlJob]`中定义 value 值
-![hMvJnQ](https://www.xuxueli.com/doc/static/xxl-job/images/img_ZAsz.png)
-
-#### 使用案例
-
-```php
-namespace App\Job;
-
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\XxlJob\Annotation\XxlJob;
-use Hyperf\XxlJob\Logger\JobExecutorLoggerInterface;
-use Hyperf\XxlJob\Requests\RunRequest;
-
-class DemoJob
-{
-    
-    #[Inject]
-    protected JobExecutorLoggerInterface $jobExecutorLogger;
-    
-    /**
-     * 1.任务示例.
-     */
-    #[XxlJob('demoJobHandler')]
-    public function demoJobHandler(RunRequest $request)
-    {
-        //获取参数
-        $params = $request->getExecutorParams();
-        //获取logId
-        $logId = $request->getLogId();
-        $this->jobExecutorLogger->info('params:' . $params);
-        for ($i = 1; $i < 5; ++$i) {
-            sleep(2);
-            $this->jobExecutorLogger->info($i);
-            $this->jobExecutorLogger->info('logId:' . $logId);
-            $this->jobExecutorLogger->info('params:' . $params);
-        }
-    }
-
-    /**
-     * 2、分片广播任务
-     */
-    #[XxlJob('shardingJobHandler')]
-    public function shardingJobHandler(RunRequest $request)
-    {
-        // 分片参数
-        $shardIndex = $request->getBroadcastIndex();
-        $shardTotal = $request->getBroadcastTotal();
-        $this->jobExecutorLogger->info(sprintf('分片参数：当前分片序号 = %d, 总分片数 = %d', $shardIndex, $shardTotal));
-        // 业务逻辑
-        for ($i = 0; $i < $shardTotal; ++$i) {
-            if ($i == $shardIndex) {
-                $this->jobExecutorLogger->info('第 %d 片, 命中分片开始处理', $i);
-            } else {
-                $this->jobExecutorLogger->info('第 %d 片, 忽略', $i);
-            }
-        }
-    }
-
-    /**
-     * 3、执行命令.
-     */
-    #[XxlJob('commandJobHandler')]
-    public function commandJobHandler(RunRequest $request)
-    {
-        //获取参数
-        //例子:php -v
-        $command = $request->getExecutorParams();
-        var_dump($command);
-        $result = System::exec($command);
-        $message = str_replace("\n", '<br>', $result['output']);
-        $this->jobExecutorLogger->info($message);
-    }
-
-    /**
-     * 4、param任务
-     *  参数示例：
-     *      "url: http://www.baidu.com\n" +
-     *      "method: get".
-     */
-    #[XxlJob('paramJobHandler')]
-    public function paramJobHandler(RunRequest $request)
-    {
-        $param = $request->getExecutorParams();
-        $array = explode(PHP_EOL, $param);
-        /** array(2) {
-              [0]=>
-              string(25) "url: http://www.baidu.com"
-              [1]=>
-              string(11) "method: get"
-            }
-         */
-        var_dump($param, $array);
-    }
-
-    /**
-     * 5、任务示例：任务初始化与销毁时，支持自定义相关逻辑.
-     */
-    #[XxlJob(value: 'demoJob', init: 'initMethod', destroy: 'destroyMethod')]
-    public function demoJob()
-    {
-        $this->jobExecutorLogger->info('demoJob run...');
-    }
-
-    public function initMethod()
-    {
-        $this->jobExecutorLogger->info('initMethod');
-    }
-
-    public function destroyMethod()
-    {
-        $this->jobExecutorLogger->info('destroyMethod');
-    }
-}
-```
 
 ### Glue 脚本模式
 
@@ -264,6 +37,143 @@ class DemoJob
 优点：极度灵活，可以实现不重启新增和修改 Job 代码，支持多种脚本语言，独立进程   
 缺点：大批量任务时容易造成进程数过多，脚本代码由 XXL-JOB 远程编辑发放容易导致安全问题，Job 代码可对 Executor 所在服务器环境进行与启动 Hyperf 应用的权限相同的操作
 
-### 引用
+## Hyperf 中使用
 
-关于 XXL-JOB 更多的使用细节可参考 [XXL-JOB 官方文档](https://www.xuxueli.com/xxl-job/#%E3%80%8A%E5%88%86%E5%B8%83%E5%BC%8F%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E5%B9%B3%E5%8F%B0XXL-JOB%E3%80%8B)
+### 安装  [kukewang/](https://packagist.org/packages/kukewang/)hyperf_xxl_job
+
+1. [composer地址](https://packagist.org/packages/kukewang/hyperf_xxl_job)，当前环境中需要有 git 环境，组件的依赖包需要使用 git 拉取
+
+   `composer require kukewang/hyperf_xxl_job`
+
+2. 发布配置文件
+
+   `php bin/hyperf.php vendor:publish kukewang/hyperf_xxl_job`
+
+3. 配置文件: `config/autoload/xxl_job.php`
+
+   ```PHP
+   return [
+       // 是否启用 xxl_job
+       'enable' => env('XXL_JOB_ENABLE', true),
+       // XXL-JOB 服务端地址
+       'admin_address' => env('XXL_JOB_ADMIN_ADDRESS', 'http://127.0.0.1:8080/xxl-job-admin'),
+       // 对应的 AppName,xxl-job 创建的执行器 appName
+       'app_name' => env('XXL_JOB_APP_NAME', 'xxl-job-demo'),
+       // 访问凭证,执行器的访问凭证,如果配置，必填
+       'access_token' => env('XXL_JOB_ACCESS_TOKEN', ''),
+       // 执行器心跳间隔（秒）
+       'heartbeat' => env('XXL_JOB_HEARTBEAT', 30),
+       // 执行器 HTTP Server 相关配置
+       'executor_server' => [
+           // HTTP Server 路由前缀
+           'prefix_url' => env('XXL_JOB_EXECUTOR_PREFIX_URL', 'php-xxl-job')
+       ],
+       'guzzle_config' => [
+           'headers' => [
+               'charset' => 'UTF-8',
+           ],
+           'timeout' => 10,
+       ],
+       'file_logger' => [
+           'dir' => BASE_PATH . '/runtime/xxl_job/logs/',
+       ],
+   ];
+   ```
+
+4. .env 文件
+
+   ```json
+   # 是否开启 xxl-job
+   XXL_JOB_ENABLE = true
+   # XXL-JOB 服务端地址
+   XXL_JOB_ADMIN_ADDRESS = http://xxl-job-admin.kukejs-dev.svc.cluster.local/xxl-job-admin
+   # 对应的 AppName(执行器名称)
+   XXL_JOB_APP_NAME = kukedatacenter
+   # 访问凭证 (暂时为空，任务是 GLUE,则必须有访问令牌 )
+   XXL_JOB_ACCESS_TOKEN =
+   # 执行器心跳间隔（秒）
+   XXL_JOB_HEARTBEAT = 30
+   # 执行器 HTTP Server 相关配置，路由的 prefix
+   XXL_JOB_PREFIX_URL = kukedatacenter-xxl-job
+   ```
+
+
+
+### Hyperf 框架创建任务类
+
+1. 在 Hyperf 框架中创建任务类，并继承 `use Hyperf\XxlJob\Handler\AbstractJobHandler`
+2. 实现 `execute` 方法，业务逻辑在此方法中编写
+3. 添加注解 `@XxlJob(jobHandler="testJobHandler",init="init",destroy="destroy")`
+    1. jobHandler 调度中心创建任务的 JobHandler![image-20211208140702602](https://cdn.learnku.com/uploads/images/202112/08/33853/PXnjbLBPGm.png!large)
+    2. init 执行 `execute` 方法前的初始化方法，方法名自定义
+    3. destory 执行 `execute` 方法后执行的方法，方法名自定义
+
+```PHP
+<?php
+
+declare(strict_types=1);
+
+
+namespace App\Command;
+
+use Hyperf\XxlJob\Annotation\XxlJob;
+use Hyperf\XxlJob\Handler\AbstractJobHandler;
+use Hyperf\XxlJob\Requests\RunRequest;
+
+/**
+ * @XxlJob(jobHandler="testJobHandler",init="init",destroy="destroy")
+ */
+class TestCommand extends AbstractJobHandler
+{
+    public function init()
+    {
+        var_dump('init');
+    }
+    
+    public function execute(RunRequest $request): void
+    {
+        var_dump(1);
+    }
+    
+    public function destroy()
+    {
+        var_dump('destroy');
+    }
+}
+```
+
+
+
+### 调度中心配置
+
+1. 创建执行器
+
+   ![image-20211208142529463](https://cdn.learnku.com/uploads/images/202112/08/33853/2yMGpN7KNy.png!large)
+
+   注册方式：自动注册
+
+2. 创建任务
+
+   ![image-20211208142855343](https://cdn.learnku.com/uploads/images/202112/08/33853/YZ98PIlnt3.png!large)
+
+    1. 执行器 根据需要添加
+    2. 填写 cron 规则
+    3. 运行模式选择 `BEAN`
+    4. JobHandler 自定义
+
+3. 根据创建的 执行器 和 任务 填写 Hyperf 配置
+
+    1. .env
+
+   ![image-20211208143304563](https://cdn.learnku.com/uploads/images/202112/08/33853/0G8qpAui8n.png!large)
+
+    2. 任务类
+
+       ![image-20211208143543278](https://cdn.learnku.com/uploads/images/202112/08/33853/8TzB9Q0Ctu.png!large)
+
+
+
+## 引用
+
+> 关于 XXL-JOB 更多的使用细节可参考 [XXL-JOB 官方文档](https://www.xuxueli.com/xxl-job/#%E3%80%8A%E5%88%86%E5%B8%83%E5%BC%8F%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E5%B9%B3%E5%8F%B0XXL-JOB%E3%80%8B)
+
